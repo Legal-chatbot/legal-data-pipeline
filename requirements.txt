@@ -1,0 +1,7 @@
+neo4j>=5.20.0
+pandas>=2.0.0
+pyarrow>=14.0.0
+tqdm>=4.66.0
+python-dotenv>=1.0.0
+
+sentence-transformers>=2.7.0
