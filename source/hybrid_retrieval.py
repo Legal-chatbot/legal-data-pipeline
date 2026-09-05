@@ -166,9 +166,13 @@ class HybridRetrievalEngine:
         self.config = config or HybridRetrievalConfig()
         self.query_understanding = query_understanding or QueryUnderstandingService()
 
-    def retrieve(self, query: str, top_k: int | None = None) -> RetrievalResult:
-        structured_query = None
-        if self.query_understanding is not None:
+    def retrieve(
+        self,
+        query: str,
+        top_k: int | None = None,
+        structured_query: StructuredQuery | None = None,
+    ) -> RetrievalResult:
+        if structured_query is None and self.query_understanding is not None:
             structured_query = self.query_understanding.understand(query)
 
         vector_results: Sequence[SearchResult] = ()
