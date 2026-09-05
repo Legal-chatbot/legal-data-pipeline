@@ -12,7 +12,7 @@ from source.llm_answer_service import (
 
 
 class FakeProvider:
-    def __init__(self, answer="Căn cứ Điều 5 [Luật thử nghiệm], ..."):
+    def __init__(self, answer="Căn cứ Điều 5 [C1], ..."):
         self.answer = answer
         self.calls = []
 
@@ -48,6 +48,7 @@ def test_generates_grounded_answer_with_metadata():
     assert result.confidence == 0.92
     assert provider.calls[0][0] == SYSTEM_PROMPT
     assert "Điều 5 quy định gì?" in provider.calls[0][1]
+    assert "[C1] Luật thử nghiệm - Điều 5" in provider.calls[0][1]
 
 
 def test_empty_context_returns_warning_without_calling_provider():
