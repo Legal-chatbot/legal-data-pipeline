@@ -9,6 +9,8 @@ import time
 from typing import Any, Mapping, Protocol, Sequence
 from urllib import error, request
 
+from source.legal_citation import Citation, LegalCitationSystem
+
 
 class LLMProviderError(RuntimeError):
     """Raised when an LLM provider cannot return a valid completion."""
@@ -140,7 +142,7 @@ to the relevant statements and do not cite sources that are absent from the cont
 @dataclass(frozen=True)
 class LegalAnswer:
     answer: str
-    citations: tuple[str, ...] = field(default_factory=tuple)
+    citations: tuple[Citation, ...] = field(default_factory=tuple)
     referenced_documents: tuple[Mapping[str, Any], ...] = field(default_factory=tuple)
     confidence: float | None = None
     retrieval_information: Mapping[str, Any] = field(default_factory=dict)
@@ -160,6 +162,7 @@ class LLMAnswerGenerationService:
             raise ValueError("timeout_seconds must be greater than zero")
         self.provider = provider
         self.timeout_seconds = timeout_seconds
+        self.citation_system = LegalCitationSystem()
 
     def generate(
         self,
@@ -170,7 +173,7 @@ class LLMAnswerGenerationService:
         if not isinstance(user_query, str) or not user_query.strip():
             raise ValueError("user_query must be a non-empty string")
         context_text = self._context_text(retrieved_context)
-        citations = self._context_citations(retrieved_context)
+        citations = self.citation_system.from_context(retrieved_context)
         documents = self._context_documents(retrieved_context)
         retrieval_information = self._retrieval_information(retrieved_context)
         if not context_text.strip():
@@ -184,11 +187,17 @@ class LLMAnswerGenerationService:
             )
 
         structured = self._serialize_structured_query(structured_query)
+        citation_registry = "\n".join(
+            f"[{citation.citation_id}] {citation.label}"
+            for citation in citations
+        )
         user_prompt = (
             f"USER QUERY:\n{user_query.strip()}\n\n"
             f"STRUCTURED QUERY:\n{structured}\n\n"
+            f"CITATION REGISTRY:\n{citation_registry or 'No citations available.'}\n\n"
             f"LEGAL CONTEXT:\n{context_text}\n\n"
-            "Return a grounded answer with inline citations from the context. "
+            "Return a grounded answer with inline citation markers such as [C1] "
+            "from the supplied citation registry. Never invent a citation ID. "
             "Explicitly label reasoning when interpretation is needed."
         )
         try:
@@ -201,16 +210,33 @@ class LLMAnswerGenerationService:
             if isinstance(exc, LLMProviderError):
                 raise
             raise LLMProviderError("legal answer generation failed") from exc
-        warnings = ()
+        citation_validation = self.citation_system.validate(answer, citations)
+        warnings = list()
         if not citations:
-            warnings = ("Context has no citation metadata; verify the answer manually.",)
+            warnings.append("Context has no citation metadata; verify the answer manually.")
+        if citation_validation.missing_citation:
+            warnings.append("LLM response did not include a citation from the retrieved context.")
+        if citation_validation.invalid_references:
+            warnings.append(
+                "Invalid citation markers: "
+                + ", ".join(citation_validation.invalid_references)
+            )
+        retrieval_information["citation_validation"] = {
+            "invalid_references": list(citation_validation.invalid_references),
+            "missing_citation": citation_validation.missing_citation,
+            "trusted_citations": [
+                citation.citation_id
+                for citation in citation_validation.citations
+                if citation.is_trusted
+            ],
+        }
         return LegalAnswer(
             answer=answer,
-            citations=tuple(citations),
+            citations=citation_validation.citations,
             referenced_documents=tuple(documents),
             confidence=self._confidence(retrieved_context),
             retrieval_information=retrieval_information,
-            warnings=warnings,
+            warnings=tuple(warnings),
         )
 
     @staticmethod
@@ -222,16 +248,6 @@ class LLMAnswerGenerationService:
     @staticmethod
     def _context_items(context: Any) -> Sequence[Any]:
         return tuple(getattr(context, "items", ()))
-
-    @classmethod
-    def _context_citations(cls, context: Any) -> list[str]:
-        return list(
-            dict.fromkeys(
-                str(item.citation)
-                for item in cls._context_items(context)
-                if getattr(item, "citation", None)
-            )
-        )
 
     @classmethod
     def _context_documents(cls, context: Any) -> list[Mapping[str, Any]]:
