@@ -12,6 +12,7 @@ from uuid import uuid4
 from fastapi import Depends, FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -123,7 +124,11 @@ def _answer_response(answer: LegalAnswer, request_id: str, latency_ms: float) ->
     )
 
 
-def create_app(rag_service: LegalRAGService | None = None) -> FastAPI:
+def create_app(
+    rag_service: LegalRAGService | None = None,
+    *,
+    lifespan: Any | None = None,
+) -> FastAPI:
     """Create the API app; production wiring can inject a configured service."""
 
     app = FastAPI(
@@ -132,8 +137,17 @@ def create_app(rag_service: LegalRAGService | None = None) -> FastAPI:
         description="Grounded legal question answering over the RAG pipeline.",
         docs_url="/docs",
         redoc_url="/redoc",
+        lifespan=lifespan,
     )
     app.state.rag_service = rag_service
+    app.state.health_checker = None
+    allowed_hosts = [
+        host.strip()
+        for host in os.getenv("ALLOWED_HOSTS", "").split(",")
+        if host.strip()
+    ]
+    if allowed_hosts:
+        app.add_middleware(TrustedHostMiddleware, allowed_hosts=allowed_hosts)
     origins = [
         origin.strip()
         for origin in os.getenv(
@@ -220,7 +234,16 @@ def create_app(rag_service: LegalRAGService | None = None) -> FastAPI:
 
     @app.get("/health", tags=["system"], summary="Health check")
     async def health(request: Request):
-        return {"status": "ok", "request_id": _request_id(request)}
+        checker = request.app.state.health_checker
+        result = checker() if checker else {"status": "ok"}
+        return {**result, "request_id": _request_id(request)}
+
+    @app.get("/health/ready", tags=["system"], summary="Readiness check")
+    async def readiness(request: Request):
+        checker = request.app.state.health_checker
+        result = checker() if checker else {"status": "ok"}
+        status_code = 200 if result.get("status") == "ok" else 503
+        return JSONResponse({**result, "request_id": _request_id(request)}, status_code=status_code)
 
     @app.get("/api/v1", tags=["system"], summary="API information")
     async def api_info(request: Request):
