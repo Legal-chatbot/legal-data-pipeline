@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Vietnamese Legal AI research desk">
+  <title>Luật | Legal AI Desk</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,500;6..72,600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href=".">
+        <span class="brand-mark">L</span>
+        <span><strong>LUẬT</strong><small>LEGAL AI DESK</small></span>
+      </a>
+      <div class="topbar-status" id="api-status" aria-live="polite">
+        <span class="status-dot"></span><span>Đang kiểm tra kết nối</span>
+      </div>
+      <button class="ghost-button" id="new-chat" type="button">Cuộc trò chuyện mới</button>
+    </header>
+
+    <div class="workspace">
+      <aside class="sidebar" aria-label="Lịch sử trò chuyện">
+        <div class="sidebar-heading"><span>Lịch sử</span><span class="history-count" id="history-count">0</span></div>
+        <div class="history-list" id="history-list"></div>
+        <div class="sidebar-footer">
+          <span class="secure-mark">◈</span>
+          <span>Thông tin được trả lời<br>từ nguồn pháp lý truy xuất.</span>
+        </div>
+      </aside>
+
+      <main class="chat-column">
+        <section class="conversation" id="conversation" aria-live="polite">
+          <div class="welcome-block" id="welcome-block">
+            <p class="eyebrow">TRỢ LÝ PHÁP LÝ TIẾNG VIỆT</p>
+            <h1>Hỏi đúng<br><em>điều luật.</em></h1>
+            <p class="welcome-copy">Tra cứu điều, khoản và văn bản pháp luật với câu trả lời có dẫn nguồn rõ ràng.</p>
+            <div class="suggestions" aria-label="Câu hỏi gợi ý">
+              <button type="button" data-suggestion="Khoản 2 Điều 5 của Luật Đất đai quy định gì?">Khoản 2 Điều 5 quy định gì?</button>
+              <button type="button" data-suggestion="Văn bản nào thay thế Nghị định 01/2024/NĐ-CP?">Văn bản nào thay thế nghị định này?</button>
+              <button type="button" data-suggestion="Điều kiện để hợp đồng có hiệu lực là gì?">Điều kiện hợp đồng có hiệu lực?</button>
+            </div>
+          </div>
+        </section>
+
+        <div class="composer-wrap">
+          <form class="composer" id="chat-form">
+            <label class="sr-only" for="query-input">Nhập câu hỏi pháp lý</label>
+            <textarea id="query-input" rows="1" maxlength="10000" placeholder="Nhập câu hỏi pháp lý..." required></textarea>
+            <div class="composer-footer">
+              <span class="composer-hint">Enter để gửi · Shift + Enter để xuống dòng</span>
+              <button class="send-button" type="submit" id="send-button"><span>Gửi câu hỏi</span><span class="send-arrow">→</span></button>
+            </div>
+          </form>
+          <p class="disclaimer">AI hỗ trợ tra cứu, không thay thế tư vấn pháp lý chuyên môn.</p>
+        </div>
+      </main>
+
+      <aside class="sources-panel" id="sources-panel" aria-label="Nguồn pháp lý">
+        <div class="sources-header">
+          <div><p class="eyebrow">CĂN CỨ</p><h2>Nguồn pháp lý</h2></div>
+          <span class="source-count" id="source-count">0</span>
+        </div>
+        <div class="sources-empty" id="sources-empty">
+          <span class="empty-glyph">§</span>
+          <p>Nguồn trích dẫn sẽ<br>hiển thị tại đây.</p>
+        </div>
+        <div class="source-detail" id="source-detail" hidden></div>
+      </aside>
+    </div>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

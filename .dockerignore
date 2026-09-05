@@ -1,0 +1,17 @@
+.git
+.venv
+__pycache__
+*.pyc
+.pytest_cache
+raw
+pre-data
+processed/*.parquet
+processed/*.pq
+embeddings
+.env
+.env.*
+!.env.production.example
+tests
+frontend
+notebooks
+*.ipynb
