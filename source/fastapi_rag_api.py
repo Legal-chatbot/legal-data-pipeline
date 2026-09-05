@@ -4,12 +4,14 @@ from __future__ import annotations
 
 from dataclasses import asdict, is_dataclass
 import logging
+import os
 from time import perf_counter
 from typing import Any
 from uuid import uuid4
 
 from fastapi import Depends, FastAPI, Request
 from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -132,6 +134,21 @@ def create_app(rag_service: LegalRAGService | None = None) -> FastAPI:
         redoc_url="/redoc",
     )
     app.state.rag_service = rag_service
+    origins = [
+        origin.strip()
+        for origin in os.getenv(
+            "FRONTEND_ORIGINS",
+            "http://127.0.0.1:5500,http://localhost:5500",
+        ).split(",")
+        if origin.strip()
+    ]
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=origins,
+        allow_credentials=False,
+        allow_methods=["GET", "POST", "OPTIONS"],
+        allow_headers=["Content-Type", "X-Request-ID"],
+    )
 
     @app.middleware("http")
     async def request_context(request: Request, call_next):
